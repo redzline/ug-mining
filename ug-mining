@@ -1,0 +1,74 @@
+# -*- coding: utf-8 -*-
+
+#Opens an csv file of a mining block model with four columns: XC, YC, ZC and Profit
+#XC, YC and ZC columns represent the coordinates of each block and Profit represents the profit of mining that block
+#The script asumes ZC coordinate as the vertical coordinate
+#It detects every block sharing the same XC and YC coordinate, and calculates and evaluates every possible
+#combination of blocks in order to get the maximum profit for that horizontal coordinate (XC, YC)
+
+import pandas as pd
+import numpy as np
+
+address = "path_to_csv_file.csv" #block model file
+
+df = pd.read_csv(address)
+header = ["XC", "YC", "ZC", "PROFIT"]
+df.columns = header
+df.sort_values(["XC","YC","ZC"], ascending = [1,1,1], inplace=True) #sort block model by coordinates
+df["MINEABLE"]=0 #indicator, 0 not in the optimal column, 1 block in the optimal column
+
+BLOCKS = max(df.index) #total blocks on block model
+botIndex = 0 #index of bottom block of the column
+colCount = 1 #columns counter
+colHeight = 1 #column height
+sameColumn = True #detec blocks in the same column
+colProfit = 0 #max profit for mining blocks in the same column
+tempColProfit = 0 #partial profit for mining blocks in order to get the max profit
+blockProfit = 0 #block profit for mining
+lowestBlock = -1 #lowest block of optimal column
+highestBlock = -1 #highsest block of optimal column
+
+
+while botIndex < BLOCKS:
+    sameColumn = True
+    
+    while sameColumn:
+        if df.iloc[botIndex]["XC"]==df.iloc[colHeight]["XC"] and df.iloc[botIndex]["YC"]==df.iloc[colHeight]["YC"] and colHeight<BLOCKS:
+            #sameColumn
+            colHeight+=1
+        else:
+            #notTheSameColumn
+            for botBlock in range(botIndex,colHeight if colHeight<BLOCKS else colHeight+1):
+                for topBlock in range(botBlock,colHeight if colHeight<BLOCKS else colHeight+1):
+                    for block in range(botBlock,topBlock+1):
+                        tempColProfit+=df.iloc[block]["PROFIT"]
+                        if tempColProfit >= colProfit and df.iloc[block]["PROFIT"] > 0:
+                            colProfit = tempColProfit
+                            lowestBlock = botBlock
+                            highestBlock = block
+                    #if lowestBlock > 0:
+                    print("Bottom: ",botBlock,". Top: ", topBlock,". Profit: ", tempColProfit)
+                    tempColProfit = 0
+            #for block in range(lowestBlock,highestBlock+1):
+            df.iloc[lowestBlock:highestBlock+1,4]=1
+            print("Col: ", colCount," | Profit: ", colProfit, " | Bottom: ", lowestBlock, " | Top: ",highestBlock)
+            colCount+=1
+            colProfit = 0
+            lowestBlock = -1
+            highestBlock = -1
+            sameColumn = False
+    botIndex=colHeight
+    #print("Aux botIndex: ", botIndex)
+    colHeight=botIndex+1
+    #print("Aux colHeight: ", colHeight)
+
+colCount-=1 #correction of last column
+print("Total Cols: ", colCount)    
+
+
+df.head(27)
+
+
+
+
+#df.to_csv("path_to_modified_file.csv", index=False)
